@@ -1,0 +1,21 @@
+﻿Question,AnswerFormat,Solution
+"Jupiter's ""Great Red Spot"" is larger than Earth.",Binary,TRUE
+"The Brooklyn Dodgers' name was an abbreviation for ""trolley car dodgers.""",Binary,TRUE
+"""Hypersonic"" is fater than ""subsonic.""",Binary,TRUE
+A polygon is three dimensional and a polyhedron is two dimensional.,Binary,FALSE
+A 1-watt electric motor produces 1 horsepower.,Binary,FALSE
+Chicago is more populous than Boston.,Binary,TRUE
+"In 2005, Walmart sales dropped below $100 billion.",Binary,FALSE
+Post-it Notes were invented by 3M.,Binary,TRUE
+"Alfred Nobel, whose fortune endows the Nobel Peace Prize, made his fortune in oil and explosives.",Binary,TRUE
+A BTU is a measure of heat.,Binary,TRUE
+The winner of the first Indianapolis 500 clocked an average speed of under 100 mph.,Binary,TRUE
+Microsoft has more employees than IBM.,Binary,FALSE
+Romania borders Hungary,Binary,TRUE
+Idaho is larger (area) than Iraq.,Binary,FALSE
+Casablanca is on the African continent.,Binary,TRUE
+The first man-made plastic was invented in the nineteenth century.,Binary,TRUE
+A chamois is an alpine animal.,Binary,TRUE
+The base of a pyramid is in the shape of a square.,Binary,TRUE
+Stonehenge is located on the main British island.,Binary,TRUE
+Computer processors double in power every three months or less.,Binary,FALSE

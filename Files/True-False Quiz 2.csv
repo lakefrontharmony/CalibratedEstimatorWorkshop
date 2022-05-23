@@ -1,0 +1,21 @@
+﻿Question,AnswerFormat,Solution
+"The Lincoln Highway was the first paved road in the United States, and it ran from Chicago to San Francisco.",Binary,FALSE
+Iron is denser than gold.,Binary,FALSE
+More American homes have microwaves than telephones.,Binary,FALSE
+"""Doric"" is an architectural term for a shape of a roof.",Binary,FALSE
+"In 2014, the World Tourism Organization predicted that Eurpoe will still be the most popular tourist destination in 2020.",Binary,TRUE
+Germany was the second country to develop atomic weapons.,Binary,FALSE
+A hockey puck will fit in a golf hole.,Binary,TRUE
+"The Sioux were one of the ""Plains"" Native American tribes.",Binary,TRUE
+"To a physicist, ""plasma"" is a type of rock.",Binary,FALSE
+The Hundred Years' War was actually over a century long.,Binary,TRUE
+Most of the fresh water on Earth is in the polar ice caps.,Binary,TRUE
+The Academy Awards (Oscars) began overa century ago.,Binary,FALSE
+There are fewer than 200 billionaires in the world.,Binary,FALSE
+"In Excel, a ""^"" means ""take to the power of."" ",Binary,TRUE
+"The average annual salary of airline captains is over $150,000.",Binary,FALSE
+"By 1997, Bill Gates was worth more than $10 billion.",Binary,TRUE
+Cannons were used in European warfare by the eleventh century.,Binary,FALSE
+Anchorage is the capital of Alaska.,Binary,FALSE
+"Washington, Jefferson, Lincoln, and Grant are the four presidents whose heads are sculpted into Mount Rushmore.",Binary,FALSE
+John Wiley and Sons is not the largest book publisher.,Binary,TRUE
