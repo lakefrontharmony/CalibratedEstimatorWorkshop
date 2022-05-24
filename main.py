@@ -35,11 +35,6 @@ def quiz_answer_callback():
 												  question_row['Solution'],
 												  st.session_state['answer_lower_bound'],
 												  st.session_state['answer_upper_bound'])
-	print(f"UserName:{st.session_state['user_name']}, group id:{st.session_state['group_id']}, "
-		  f"datetime:{st.session_state['quiz_datetime']}, question:{question_row['Question']}, "
-		  f"solution:{question_row['Solution']}, format:{question_row['AnswerFormat']}, "
-		  f"correct:{got_answer_correct}, lower:{st.session_state['answer_lower_bound']}, "
-		  f"upper:{st.session_state['answer_upper_bound']}.")
 	answer_df = pd.DataFrame([[st.session_state['user_name'],
 							   st.session_state['group_id'],
 							   st.session_state['quiz_datetime'],
