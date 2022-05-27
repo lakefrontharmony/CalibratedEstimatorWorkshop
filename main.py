@@ -1,13 +1,12 @@
 import fnmatch
 import os
-
+from pathlib import Path
 import streamlit as st
 import pandas as pd
 from pathlib import Path
 from datetime import datetime as dt
 
-# TODO: Create admin ability to set up groups and see group results.
-# TODO: Create admin ability to read through all exports, consolidate to one file, and delete individual files.
+# TODO: Create admin ability to see results from master file (by group, or by all).
 # TODO: Add documentation to sidebar.
 # TODO: Create ability to export your results to your desktop.
 
@@ -31,8 +30,14 @@ def init_form_callback():
 		st.session_state['session_status'] = 'init_form_submitted'
 
 
+# display the admin screen
 def display_admin_screen():
 	st.session_state['session_status'] = 'admin_options'
+
+
+# within the admin section, show the screen to summarize the master file results.
+def show_master_results():
+	st.session_state['session_status'] = 'admin_master_summary_page'
 
 
 def quiz_form_callback():
@@ -63,14 +68,20 @@ def quiz_answer_callback():
 		st.session_state['current_index'] += 1
 
 
+# go back one question (delete the previous answer for that question you are navigating to)
+def goto_prev_quiz_question():
+	st.session_state['answers_df'] = st.session_state['answers_df'].iloc[:-1, :]
+	st.session_state['current_index'] -= 1
+
+
 # helper functions
 def reset_to_start():
 	for key in st.session_state.keys():
 		del st.session_state[key]
 
 
+# build a list of new files that need to be added to the master file
 def search_for_files():
-	master_file_name = 'Files/MasterResults.csv'
 	exports_dir = 'Files/Exports'
 	st.session_state['export_result_file_names'] = []
 	st.session_state['export_summary_file_names'] = []
@@ -83,13 +94,36 @@ def search_for_files():
 			st.session_state['export_summary_file_names'].append(exports_dir + '/' + filename.name)
 
 
+# add new files to the master xlsx file.
 def add_to_master_record():
-	# TODO: Check if master record exists (Excel file).
-	# TODO: Read in any existing master record and create one dataframe for summary and one for results.
-	# TODO: Append new summary and new results.
-	# TODO: Write out new Excel master record file.
-	# TODO: Delete individual files.
-	pass
+	master_file_name = 'Files/MasterResults.xlsx'
+	master_file = Path(master_file_name)
+	summary_df = pd.DataFrame()
+	results_df = pd.DataFrame()
+	st.session_state['master_updated'] = False
+
+	for new_file in st.session_state['export_result_file_names']:
+		temp_pd = pd.read_csv(new_file)
+		results_df = pd.concat([results_df, temp_pd], ignore_index=True)
+
+	for new_file in st.session_state['export_summary_file_names']:
+		temp_pd = pd.read_csv(new_file)
+		summary_df = pd.concat([summary_df, temp_pd], ignore_index=True)
+
+	if master_file.exists():
+		with pd.ExcelWriter(master_file_name, mode='a', if_sheet_exists='overlay') as writer:
+			summary_df.to_excel(writer, sheet_name='Summary', index=False)
+			results_df.to_excel(writer, sheet_name='Answers', index=False)
+	else:
+		with pd.ExcelWriter(master_file_name) as writer:
+			summary_df.to_excel(writer, sheet_name='Summary', index=False)
+			results_df.to_excel(writer, sheet_name='Answers', index=False)
+
+	for new_file in st.session_state['export_result_file_names']:
+		os.remove(new_file)
+	for new_file in st.session_state['export_summary_file_names']:
+		os.remove(new_file)
+	st.session_state['master_updated'] = True
 
 
 def calculate_90_ci_results():
@@ -246,9 +280,21 @@ if st.session_state['session_status'] == 'admin_options':
 	st.button(label='Back to Start Page', on_click=reset_to_start)
 	search_for_files()
 	if len(st.session_state['export_result_file_names']) > 0:
-		st.write(f'There is {len(st.session_state["export_result_file_names"])} new file(s). '
+		st.write(f'{len(st.session_state["export_result_file_names"])} new file(s) exist. '
 				 f'Would you like to add this data to the master record?')
 		st.button(label='Add to master', on_click=add_to_master_record)
+
+	if 'master_updated' in st.session_state:
+		if st.session_state['master_updated']:
+			st.write('successfully updated records to master file')
+			st.session_state['master_updated'] = False
+
+	st.button('Summarize Master Results', on_click=show_master_results)
+
+# display the master file summary page under the Admin screen
+if st.session_state['session_status'] == 'admin_master_summary_page':
+	st.button(label='Back to Start Page', on_click=reset_to_start)
+	st.subheader('Summary of Previous quizzes')
 
 # display the quiz selection form
 if st.session_state['session_status'] == 'init_form_submitted':
@@ -307,10 +353,15 @@ if st.session_state['session_status'] == 'quiz_underway':
 		else:
 			print('Unknown answer format when creating form')
 
+		button_label = 'Next Question'
 		if st.session_state['current_index'] >= st.session_state['max_index']:
-			st.form_submit_button(label='FINISH QUIZ', on_click=quiz_answer_callback)
-		else:
-			st.form_submit_button(label='Next Question', on_click=quiz_answer_callback)
+			button_label = 'FINISH QUIZ'
+		col3, col4 = st.columns(2)
+		with col3:
+			st.form_submit_button(label=button_label, on_click=quiz_answer_callback)
+		with col4:
+			if st.session_state['current_index'] >= 1:
+				st.form_submit_button(label='Previous Question', on_click=goto_prev_quiz_question)
 
 # display summary after finishing quiz
 if st.session_state['session_status'] == 'quiz_finished':
