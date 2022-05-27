@@ -232,27 +232,31 @@ def check_for_correct_answer(in_answer_format: str, in_solution, in_lower_bound,
 # display the initialization form
 if 'session_status' not in st.session_state:
 	init_form = st.form('init_form')
-	init_form.text_input('Please enter your name', key='init_name')
-	init_form.text_input('If you are with a group, please enter group ID below (otherwise leave blank)',
-										 key='init_group_id')
-	init_form.form_submit_button(label='Start Workshop', on_click=init_form_callback)
+	init_form.text_input('Please enter your full name (unique identifier for you)', key='init_name',
+						 placeholder='REQUIRED')
+	init_form.text_input('Group ID',
+						 placeholder='If you are with a group, please enter group ID below (otherwise leave blank)',
+						 key='init_group_id')
+	init_form.form_submit_button(label='Next', on_click=init_form_callback)
 	st.button(label='Admin', on_click=display_admin_screen)
 	st.session_state['session_status'] = 'init_displaying'
 
+# display the admin screen
 if st.session_state['session_status'] == 'admin_options':
 	st.button(label='Back to Start Page', on_click=reset_to_start)
 	search_for_files()
 	if len(st.session_state['export_result_file_names']) > 0:
 		st.write(f'There is {len(st.session_state["export_result_file_names"])} new file(s). '
 				 f'Would you like to add this data to the master record?')
+		st.button(label='Add to master', on_click=add_to_master_record)
 
 # display the quiz selection form
 if st.session_state['session_status'] == 'init_form_submitted':
 	question_file = pd.read_csv('Files/QuizList.csv')
-	st.header("Which test would you like to take?")
+	st.header("Which quiz would you like to take?")
 	quiz_form = st.form('quiz')
 	quiz_form.selectbox('Quiz:', question_file['FileName'], key='init_quiz_name')
-	quiz_form.form_submit_button(label='Begin', on_click=quiz_form_callback)
+	quiz_form.form_submit_button(label='Begin Quiz', on_click=quiz_form_callback)
 	quiz_form.form_submit_button(label='Start Over', on_click=reset_to_start)
 	st.session_state['session_status'] = 'quiz_form_displaying'
 
@@ -308,6 +312,7 @@ if st.session_state['session_status'] == 'quiz_underway':
 		else:
 			st.form_submit_button(label='Next Question', on_click=quiz_answer_callback)
 
+# display summary after finishing quiz
 if st.session_state['session_status'] == 'quiz_finished':
 	st.header('Do you feel like a calibrated estimator?')
 	calculate_90_ci_results()
@@ -318,6 +323,5 @@ if st.session_state['session_status'] == 'quiz_finished':
 	st.dataframe(st.session_state['answers_df'])
 	st.subheader('To take another quiz, click the button below')
 	st.button(label='Take again', on_click=reset_to_start)
-
 
 # st.write(st.session_state)
