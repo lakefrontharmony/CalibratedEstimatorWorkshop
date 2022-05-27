@@ -1,3 +1,6 @@
+import fnmatch
+import os
+
 import streamlit as st
 import pandas as pd
 from pathlib import Path
@@ -14,6 +17,9 @@ st.title('Becoming a Calibrated Estimator Workshop')
 st.sidebar.write('Welcome to the "Becoming a Calibrated Estimator Workshop."')
 
 
+####################
+# Internal Functions
+####################
 # Callback functions
 def init_form_callback():
 	st.session_state['user_name'] = st.session_state['init_name']
@@ -23,6 +29,10 @@ def init_form_callback():
 		del st.session_state['session_status']
 	else:
 		st.session_state['session_status'] = 'init_form_submitted'
+
+
+def display_admin_screen():
+	st.session_state['session_status'] = 'admin_options'
 
 
 def quiz_form_callback():
@@ -52,12 +62,34 @@ def quiz_answer_callback():
 	else:
 		st.session_state['current_index'] += 1
 
-	# st.dataframe(st.session_state['answers_df'])
 
-
+# helper functions
 def reset_to_start():
 	for key in st.session_state.keys():
 		del st.session_state[key]
+
+
+def search_for_files():
+	master_file_name = 'Files/MasterResults.csv'
+	exports_dir = 'Files/Exports'
+	st.session_state['export_result_file_names'] = []
+	st.session_state['export_summary_file_names'] = []
+	files = os.scandir(exports_dir)
+	for filename in files:
+		print(f'checking: {filename}')
+		if fnmatch.fnmatch(name=filename.name, pat='*Results.csv'):
+			st.session_state['export_result_file_names'].append(exports_dir + '/' + filename.name)
+		if fnmatch.fnmatch(name=filename.name, pat='*Summary.csv'):
+			st.session_state['export_summary_file_names'].append(exports_dir + '/' + filename.name)
+
+
+def add_to_master_record():
+	# TODO: Check if master record exists (Excel file).
+	# TODO: Read in any existing master record and create one dataframe for summary and one for results.
+	# TODO: Append new summary and new results.
+	# TODO: Write out new Excel master record file.
+	# TODO: Delete individual files.
+	pass
 
 
 def calculate_90_ci_results():
@@ -79,7 +111,8 @@ def calculate_90_ci_results():
 	st.subheader('90% Confidence Questions Results:')
 	st.write(f'You got {num_of_correct_questions} out of {total_num_questions} "90% Confidence" questions correct.')
 	if percent_of_correct_questions > 0.6:
-		st.write('Based on your answers, you MAY be a calibrated estimator.')
+		st.write('Based on your answers, you MAY be a calibrated estimator or you MAY be under-confident '
+				 '(i.e. You made your range of answers very large).')
 	elif (percent_of_correct_questions > 0.3) and (percent_of_correct_questions <= 0.6):
 		st.write('Based on your answers, there is only a 1.3% chance that you are a calibrated estimator. '
 				 'You are likely over-confident in your estimates.')
@@ -128,7 +161,7 @@ def calculate_binary_results():
 
 
 def write_results_to_csv():
-	export_file_name = f'Files/Exports/' + st.session_state['user_name'] + '.csv'
+	export_file_name = f'Files/Exports/' + st.session_state['user_name'] + ' Results.csv'
 	export_file = Path(export_file_name)
 	if export_file.is_file():
 		answer_csv = pd.read_csv(export_file_name)
@@ -139,7 +172,7 @@ def write_results_to_csv():
 
 
 def write_summary_to_csv():
-	summary_df = pd.DataFrame([[st.session_state['user_name'],
+	st.session_state['summary_df'] = pd.DataFrame([[st.session_state['user_name'],
 								st.session_state['group_id'],
 								st.session_state['quiz_name'],
 								st.session_state['quiz_datetime'],
@@ -159,12 +192,43 @@ def write_summary_to_csv():
 	export_file = Path(export_file_name)
 	if export_file.is_file():
 		summary_csv = pd.read_csv(export_file_name)
-		concat_df = pd.concat([summary_df, summary_csv], ignore_index=True)
+		concat_df = pd.concat([st.session_state['summary_df'], summary_csv], ignore_index=True)
 		concat_df.to_csv(export_file_name, index=False)
 	else:
-		summary_df.to_csv(export_file_name, index=False)
+		st.session_state['summary_df'].to_csv(export_file_name, index=False)
 
 
+def check_for_correct_answer(in_answer_format: str, in_solution, in_lower_bound, in_upper_bound) -> bool:
+	return_bool = False
+	if (in_answer_format == 'Number') or (in_answer_format == 'Year'):
+		if (float(in_solution) >= in_lower_bound) and (float(in_solution) <= in_upper_bound):
+			return_bool = True
+
+	elif in_answer_format == 'Percentage':
+		formatted_solution = float(in_solution.strip('%'))
+		if (formatted_solution >= in_lower_bound) and (formatted_solution <= in_upper_bound):
+			return_bool = True
+
+	elif in_answer_format == 'Binary':
+		solution_bool = False
+		if (in_solution == 'TRUE') or (in_solution == 'True'):
+			solution_bool = True
+
+		answer_bool = False
+		if in_lower_bound == 'True':
+			answer_bool = True
+		if solution_bool == answer_bool:
+			return_bool = True
+
+	else:
+		print('Unknown answer format when calculating result')
+
+	return return_bool
+
+
+####################
+# Display Flow
+####################
 # display the initialization form
 if 'session_status' not in st.session_state:
 	init_form = st.form('init_form')
@@ -172,7 +236,15 @@ if 'session_status' not in st.session_state:
 	init_form.text_input('If you are with a group, please enter group ID below (otherwise leave blank)',
 										 key='init_group_id')
 	init_form.form_submit_button(label='Start Workshop', on_click=init_form_callback)
+	st.button(label='Admin', on_click=display_admin_screen)
 	st.session_state['session_status'] = 'init_displaying'
+
+if st.session_state['session_status'] == 'admin_options':
+	st.button(label='Back to Start Page', on_click=reset_to_start)
+	search_for_files()
+	if len(st.session_state['export_result_file_names']) > 0:
+		st.write(f'There is {len(st.session_state["export_result_file_names"])} new file(s). '
+				 f'Would you like to add this data to the master record?')
 
 # display the quiz selection form
 if st.session_state['session_status'] == 'init_form_submitted':
@@ -204,10 +276,11 @@ if st.session_state['session_status'] == 'quiz_underway':
 	question_row = st.session_state['questions'].iloc[quest_num]
 	question = question_row['Question']
 	answer_format = question_row['AnswerFormat']
-	st.subheader(f'Taking "{st.session_state["quiz_name"]}" quiz')
+	st.write(f'Taking "{st.session_state["quiz_name"]}" quiz')
+	st.button(label='Start Over', on_click=reset_to_start)
 	st.header(question)
 	with st.form('question'):
-		st.form_submit_button(label='Start Over', on_click=reset_to_start)
+		# st.form_submit_button(label='Start Over', on_click=reset_to_start)
 		if answer_format == 'Number':
 			col1, col2 = st.columns(2)
 			with col1:
@@ -241,39 +314,10 @@ if st.session_state['session_status'] == 'quiz_finished':
 	calculate_binary_results()
 	write_results_to_csv()
 	write_summary_to_csv()
+	st.dataframe(st.session_state['summary_df'])
+	st.dataframe(st.session_state['answers_df'])
 	st.subheader('To take another quiz, click the button below')
 	st.button(label='Take again', on_click=reset_to_start)
-
-
-####################
-# Internal Functions
-####################
-def check_for_correct_answer(in_answer_format: str, in_solution, in_lower_bound, in_upper_bound) -> bool:
-	return_bool = False
-	if (in_answer_format == 'Number') or (in_answer_format == 'Year'):
-		if (float(in_solution) >= in_lower_bound) and (float(in_solution) <= in_upper_bound):
-			return_bool = True
-
-	elif in_answer_format == 'Percentage':
-		formatted_solution = float(in_solution.strip('%'))
-		if (formatted_solution >= in_lower_bound) and (formatted_solution <= in_upper_bound):
-			return_bool = True
-
-	elif in_answer_format == 'Binary':
-		solution_bool = False
-		if (in_solution == 'TRUE') or (in_solution == 'True'):
-			solution_bool = True
-
-		answer_bool = False
-		if in_lower_bound == 'True':
-			answer_bool = True
-		if solution_bool == answer_bool:
-			return_bool = True
-
-	else:
-		print('Unknown answer format when calculating result')
-
-	return return_bool
 
 
 # st.write(st.session_state)
