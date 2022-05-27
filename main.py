@@ -1,12 +1,11 @@
 import fnmatch
 import os
-from pathlib import Path
 import streamlit as st
 import pandas as pd
+import numpy as np
 from pathlib import Path
 from datetime import datetime as dt
 
-# TODO: Create admin ability to see results from master file (by group, or by all).
 # TODO: Add documentation to sidebar.
 # TODO: Create ability to export your results to your desktop.
 
@@ -20,6 +19,7 @@ st.sidebar.write('Welcome to the "Becoming a Calibrated Estimator Workshop."')
 # Internal Functions
 ####################
 # Callback functions
+####################
 def init_form_callback():
 	st.session_state['user_name'] = st.session_state['init_name']
 	st.session_state['group_id'] = st.session_state['init_group_id']
@@ -37,7 +37,20 @@ def display_admin_screen():
 
 # within the admin section, show the screen to summarize the master file results.
 def show_master_results():
+	master_file_name = 'Files/MasterResults.xlsx'
+	st.session_state['summary_df'] = pd.read_excel(master_file_name, sheet_name='Summary')
+	st.session_state['full_summary_df'] = st.session_state['summary_df']
+	st.session_state['summary_groups'] = st.session_state['summary_df']['GroupID'].dropna().unique()
+	st.session_state['summary_groups'] = np.append('All', st.session_state['summary_groups'])
 	st.session_state['session_status'] = 'admin_master_summary_page'
+
+
+def filter_admin_summary_df():
+	group_filter = st.session_state['admin_groupID']
+	st.session_state['summary_df'] = st.session_state['full_summary_df']
+	if group_filter != 'All':
+		group_mask = st.session_state['summary_df']['GroupID'] == group_filter
+		st.session_state['summary_df'] = st.session_state['summary_df'].loc[group_mask]
 
 
 def quiz_form_callback():
@@ -73,8 +86,9 @@ def goto_prev_quiz_question():
 	st.session_state['answers_df'] = st.session_state['answers_df'].iloc[:-1, :]
 	st.session_state['current_index'] -= 1
 
-
-# helper functions
+####################
+# Helper functions
+####################
 def reset_to_start():
 	for key in st.session_state.keys():
 		del st.session_state[key]
@@ -95,10 +109,10 @@ def search_for_files():
 
 # add new files to the master xlsx file.
 def add_to_master_record():
-	master_file_name = 'Files/MasterResults.xlsx'
-	master_file = Path(master_file_name)
-	summary_df = pd.DataFrame()
-	results_df = pd.DataFrame()
+	master_excel_name = 'Files/MasterResults.xlsx'
+	master_file = Path(master_excel_name)
+	summary_df = pd.read_excel(master_excel_name, sheet_name='Summary')
+	results_df = pd.read_excel(master_excel_name, sheet_name='Answers')
 	st.session_state['master_updated'] = False
 
 	for new_file in st.session_state['export_result_file_names']:
@@ -110,11 +124,11 @@ def add_to_master_record():
 		summary_df = pd.concat([summary_df, temp_pd], ignore_index=True)
 
 	if master_file.exists():
-		with pd.ExcelWriter(master_file_name, mode='a', if_sheet_exists='overlay') as writer:
+		with pd.ExcelWriter(master_excel_name, mode='a', if_sheet_exists='replace', engine='openpyxl') as writer:
 			summary_df.to_excel(writer, sheet_name='Summary', index=False)
 			results_df.to_excel(writer, sheet_name='Answers', index=False)
 	else:
-		with pd.ExcelWriter(master_file_name) as writer:
+		with pd.ExcelWriter(master_excel_name, engine='openpyxl') as writer:
 			summary_df.to_excel(writer, sheet_name='Summary', index=False)
 			results_df.to_excel(writer, sheet_name='Answers', index=False)
 
@@ -141,15 +155,20 @@ def calculate_90_ci_results():
 	st.session_state['num_90_ci_correct'] = num_of_correct_questions
 	percent_of_correct_questions = num_of_correct_questions/total_num_questions
 
+	display_90_ci_results(num_of_correct_questions, total_num_questions, percent_of_correct_questions)
+
+
+def display_90_ci_results(in_num_correct_questions: int, in_total_num_questions: int,
+						  in_percent_of_correct_questions: float):
 	st.subheader('90% Confidence Questions Results:')
-	st.write(f'You got {num_of_correct_questions} out of {total_num_questions} "90% Confidence" questions correct.')
-	if percent_of_correct_questions > 0.6:
+	st.write(f'You got {in_num_correct_questions} out of {in_total_num_questions} "90% Confidence" questions correct.')
+	if in_percent_of_correct_questions > 0.6:
 		st.write('Based on your answers, you MAY be a calibrated estimator or you MAY be under-confident '
 				 '(i.e. You made your range of answers very large).')
-	elif (percent_of_correct_questions > 0.3) and (percent_of_correct_questions <= 0.6):
+	elif (in_percent_of_correct_questions > 0.3) and (in_percent_of_correct_questions <= 0.6):
 		st.write('Based on your answers, there is only a 1.3% chance that you are a calibrated estimator. '
 				 'You are likely over-confident in your estimates.')
-	elif percent_of_correct_questions <= 0.3:
+	elif in_percent_of_correct_questions <= 0.3:
 		st.write('Based on your answers, there is only a 1 in 100,000 chance that you are a calibrated estimator. '
 				 'You are likely over-confident in your estimates.')
 
@@ -183,14 +202,21 @@ def calculate_binary_results():
 	expected_num_correct = (confidence_series.sum())/100
 	st.session_state['num_binary_expected_confidence_correct'] = expected_num_correct
 
+	display_binary_results(num_of_correct_questions, expected_num_correct, total_num_questions,
+						   num_of_complete_confidence, num_of_correct_complete_confidence)
+
+
+def display_binary_results(in_num_correct_questions: int, in_expected_num_correct: int, in_total_num_questions: int,
+						  in_num_of_complete_confidence: int, in_num_of_correct_complete_confidence: int):
 	st.subheader('True/False Questions Results:')
-	st.write(f'Based on your confidence ratings, you expected to get {expected_num_correct} True/False questions correct.')
-	st.write(f'You actually got {num_of_correct_questions} out of {total_num_questions} True/False questions correct.')
-	if num_of_complete_confidence == num_of_correct_complete_confidence:
-		st.write(f'You got all {num_of_correct_complete_confidence} questions which you gave 100% confidence correct.')
+	st.write(f'Based on your confidence ratings, you expected to get {in_expected_num_correct} '
+			 f'True/False questions correct.')
+	st.write(f'You actually got {in_num_correct_questions} out of {in_total_num_questions} True/False questions correct.')
+	if in_num_of_complete_confidence == in_num_of_correct_complete_confidence:
+		st.write(f'You got all questions correct ({in_num_of_correct_complete_confidence}) which you gave 100% confidence.')
 	else:
-		st.write(f'Of the {num_of_complete_confidence} questions you marked with 100% confidence, you only got '
-				 f'{num_of_correct_complete_confidence} questions correct.')
+		st.write(f'Of the {in_num_of_complete_confidence} questions you marked with 100% confidence, you only got '
+				 f'{in_num_of_correct_complete_confidence} questions correct.')
 
 
 def write_results_to_csv():
@@ -259,8 +285,26 @@ def check_for_correct_answer(in_answer_format: str, in_solution, in_lower_bound,
 	return return_bool
 
 
+def display_admin_summary_results():
+	temp_summary = st.session_state['summary_df']
+	num_correct_questions = temp_summary['Num90CICorrect'].sum()
+	total_num_questions = temp_summary['Num90CIQuestions'].sum()
+	pct_of_correct_questions = 0
+	if total_num_questions > 0:
+		pct_of_correct_questions = num_correct_questions / total_num_questions
+	display_90_ci_results(num_correct_questions, total_num_questions, pct_of_correct_questions)
+
+	num_binary_correct = temp_summary['NumBinaryCorrect'].sum()
+	expected_binary_correct = temp_summary['ExpectedBinaryCorrect'].sum()
+	total_binary_questions = temp_summary['NumBinaryQuestions'].sum()
+	num_complete_confidence = temp_summary['Binary100PctConfidence'].sum()
+	num_correct_complete_confidence = temp_summary['Binary100PctConfidenceCorrect'].sum()
+	display_binary_results(num_binary_correct, expected_binary_correct, total_binary_questions,
+						   num_complete_confidence, num_correct_complete_confidence)
+
+
 ####################
-# Display Flow
+# Display flow
 ####################
 # display the initialization form
 if 'session_status' not in st.session_state:
@@ -282,18 +326,26 @@ if st.session_state['session_status'] == 'admin_options':
 		st.write(f'{len(st.session_state["export_result_file_names"])} new file(s) exist. '
 				 f'Would you like to add this data to the master record?')
 		st.button(label='Add to master', on_click=add_to_master_record)
+	else:
+		st.write('No new files to add to master record.')
 
 	if 'master_updated' in st.session_state:
 		if st.session_state['master_updated']:
-			st.write('successfully updated records to master file')
+			st.write('Successfully updated records to master file')
 			st.session_state['master_updated'] = False
 
 	st.button('Summarize Master Results', on_click=show_master_results)
 
+# WIP
 # display the master file summary page under the Admin screen
 if st.session_state['session_status'] == 'admin_master_summary_page':
 	st.button(label='Back to Start Page', on_click=reset_to_start)
 	st.subheader('Summary of Previous quizzes')
+	if len(st.session_state['summary_groups']) > 0:
+		st.selectbox(label='Filter by GroupID', options=st.session_state['summary_groups'],
+					 key='admin_groupID', on_change=filter_admin_summary_df)
+	display_admin_summary_results()
+	st.dataframe(st.session_state['summary_df'])
 
 # display the quiz selection form
 if st.session_state['session_status'] == 'init_form_submitted':
@@ -329,7 +381,6 @@ if st.session_state['session_status'] == 'quiz_underway':
 	st.button(label='Start Over', on_click=reset_to_start)
 	st.header(question)
 	with st.form('question'):
-		# st.form_submit_button(label='Start Over', on_click=reset_to_start)
 		if answer_format == 'Number':
 			col1, col2 = st.columns(2)
 			with col1:
