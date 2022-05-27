@@ -235,7 +235,7 @@ if 'session_status' not in st.session_state:
 	init_form.text_input('Please enter your full name (unique identifier for you)', key='init_name',
 						 placeholder='REQUIRED')
 	init_form.text_input('Group ID',
-						 placeholder='If you are with a group, please enter group ID below (otherwise leave blank)',
+						 placeholder='If you are with a group, please enter group ID (otherwise leave blank)',
 						 key='init_group_id')
 	init_form.form_submit_button(label='Next', on_click=init_form_callback)
 	st.button(label='Admin', on_click=display_admin_screen)
