@@ -87,7 +87,6 @@ def search_for_files():
 	st.session_state['export_summary_file_names'] = []
 	files = os.scandir(exports_dir)
 	for filename in files:
-		print(f'checking: {filename}')
 		if fnmatch.fnmatch(name=filename.name, pat='*Results.csv'):
 			st.session_state['export_result_file_names'].append(exports_dir + '/' + filename.name)
 		if fnmatch.fnmatch(name=filename.name, pat='*Summary.csv'):
