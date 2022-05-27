@@ -1,0 +1,1 @@
+This folder is for exports from the Calibrated Estimator Quiz. Files will be created here for each user that takes the quiz, but will be deleted when an admin consolidates their files to the master file.
