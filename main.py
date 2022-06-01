@@ -289,18 +289,18 @@ def display_admin_summary_results():
 	temp_summary = st.session_state['summary_df']
 	num_correct_questions = temp_summary['Num90CICorrect'].sum()
 	total_num_questions = temp_summary['Num90CIQuestions'].sum()
-	pct_of_correct_questions = 0
 	if total_num_questions > 0:
 		pct_of_correct_questions = num_correct_questions / total_num_questions
-	display_90_ci_results(num_correct_questions, total_num_questions, pct_of_correct_questions)
+		display_90_ci_results(num_correct_questions, total_num_questions, pct_of_correct_questions)
 
 	num_binary_correct = temp_summary['NumBinaryCorrect'].sum()
 	expected_binary_correct = temp_summary['ExpectedBinaryCorrect'].sum()
 	total_binary_questions = temp_summary['NumBinaryQuestions'].sum()
 	num_complete_confidence = temp_summary['Binary100PctConfidence'].sum()
 	num_correct_complete_confidence = temp_summary['Binary100PctConfidenceCorrect'].sum()
-	display_binary_results(num_binary_correct, expected_binary_correct, total_binary_questions,
-						   num_complete_confidence, num_correct_complete_confidence)
+	if total_binary_questions > 0:
+		display_binary_results(num_binary_correct, expected_binary_correct, total_binary_questions,
+							   num_complete_confidence, num_correct_complete_confidence)
 
 
 ####################
