@@ -13,6 +13,10 @@ st.set_page_config(layout='wide')
 
 st.title('Becoming a Calibrated Estimator Workshop')
 st.sidebar.write('Welcome to the "Becoming a Calibrated Estimator Workshop."')
+st.sidebar.subheader('Ground Rules:')
+st.sidebar.write('1. No web searches (you are trying to determine how you do at estimating based on limited knowledge).')
+st.sidebar.write('2. If you are taking this with a group, every person does their own work.')
+st.sidebar.write('')
 
 
 ####################
