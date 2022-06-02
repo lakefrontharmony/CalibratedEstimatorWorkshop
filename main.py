@@ -1,5 +1,7 @@
 import fnmatch
 import os
+from io import BytesIO
+
 import streamlit as st
 import pandas as pd
 import numpy as np
@@ -42,19 +44,44 @@ def display_admin_screen():
 # within the admin section, show the screen to summarize the master file results.
 def show_master_results():
 	master_file_name = 'Files/MasterResults.xlsx'
-	st.session_state['summary_df'] = pd.read_excel(master_file_name, sheet_name='Summary')
+	if Path(master_file_name).exists():
+		st.session_state['summary_df'] = pd.read_excel(master_file_name, sheet_name='Summary')
+		st.session_state['answers_df'] = pd.read_excel(master_file_name, sheet_name='Answers')
+	else:
+		st.session_state['summary_df'] = create_summary_df()
+		st.session_state['answers_df'] = create_results_df()
+
 	st.session_state['full_summary_df'] = st.session_state['summary_df']
+	st.session_state['full_answers_df'] = st.session_state['answers_df']
 	st.session_state['summary_groups'] = st.session_state['summary_df']['GroupID'].dropna().unique()
 	st.session_state['summary_groups'] = np.append('All', st.session_state['summary_groups'])
+
+	st.session_state['user_names'] = st.session_state['summary_df']['UserName'].dropna().unique()
+	st.session_state['user_names'] = np.append('All', st.session_state['user_names'])
+
 	st.session_state['session_status'] = 'admin_master_summary_page'
 
 
-def filter_admin_summary_df():
+def filter_admin_summary_df_by_group():
 	group_filter = st.session_state['admin_groupID']
 	st.session_state['summary_df'] = st.session_state['full_summary_df']
+	st.session_state['answers_df'] = st.session_state['full_answers_df']
 	if group_filter != 'All':
-		group_mask = st.session_state['summary_df']['GroupID'] == group_filter
-		st.session_state['summary_df'] = st.session_state['summary_df'].loc[group_mask]
+		summary_mask = st.session_state['summary_df']['GroupID'] == group_filter
+		st.session_state['summary_df'] = st.session_state['summary_df'].loc[summary_mask]
+		answers_mask = st.session_state['answers_df']['GroupID'] == group_filter
+		st.session_state['answers_df'] = st.session_state['answers_df'].loc[answers_mask]
+
+
+def filter_admin_summary_df_by_name():
+	name_filter = st.session_state['admin_user_name']
+	st.session_state['summary_df'] = st.session_state['full_summary_df']
+	st.session_state['answers_df'] = st.session_state['full_answers_df']
+	if name_filter != 'All':
+		summary_mask = st.session_state['summary_df']['UserName'] == name_filter
+		st.session_state['summary_df'] = st.session_state['summary_df'].loc[summary_mask]
+		answers_mask = st.session_state['answers_df']['UserName'] == name_filter
+		st.session_state['answers_df'] = st.session_state['answers_df'].loc[answers_mask]
 
 
 def quiz_form_callback():
@@ -90,6 +117,7 @@ def goto_prev_quiz_question():
 	st.session_state['answers_df'] = st.session_state['answers_df'].iloc[:-1, :]
 	st.session_state['current_index'] -= 1
 
+
 ####################
 # Helper functions
 ####################
@@ -115,8 +143,12 @@ def search_for_files():
 def add_to_master_record():
 	master_excel_name = 'Files/MasterResults.xlsx'
 	master_file = Path(master_excel_name)
-	summary_df = pd.read_excel(master_excel_name, sheet_name='Summary')
-	results_df = pd.read_excel(master_excel_name, sheet_name='Answers')
+	summary_df = create_summary_df()
+	results_df = create_results_df()
+	if master_file.exists():
+		summary_df = pd.read_excel(master_excel_name, sheet_name='Summary')
+		results_df = pd.read_excel(master_excel_name, sheet_name='Answers')
+
 	st.session_state['master_updated'] = False
 
 	for new_file in st.session_state['export_result_file_names']:
@@ -307,6 +339,36 @@ def display_admin_summary_results():
 							   num_complete_confidence, num_correct_complete_confidence)
 
 
+def create_summary_df() -> pd.DataFrame:
+	return pd.DataFrame(columns=['UserName', 'GroupID',
+								 'QuizName', 'DateTime',
+								 'Num90CIQuestions', 'Num90CICorrect',
+								 'NumBinaryQuestions', 'NumBinaryCorrect',
+								 'ExpectedBinaryCorrect', 'Binary100PctConfidence',
+								 'Binary100PctConfidenceCorrect'])
+
+
+def create_results_df() -> pd.DataFrame:
+	return pd.DataFrame(columns=['UserName', 'GroupID', 'QuizDateTime', 'Question', 'AnswerFormat',
+								 'CorrectAnswer', 'Solution', 'LowerBound', 'UpperBound'])
+
+
+@st.cache
+def convert_df_to_csv(in_df: pd.DataFrame):
+	return in_df.to_csv().encode('utf-8')
+
+
+@st.cache
+def convert_df_to_excel(in_summary_df: pd.DataFrame, in_answer_df: pd.DataFrame):
+	output = BytesIO()
+	writer = pd.ExcelWriter(output, engine='openpyxl')
+	in_summary_df.to_excel(writer, sheet_name='Summary', index=False)
+	in_answer_df.to_excel(writer, sheet_name='Answers', index=False)
+	writer.save()
+	processed_data = output.getvalue()
+	return processed_data
+
+
 ####################
 # Display flow
 ####################
@@ -340,16 +402,25 @@ if st.session_state['session_status'] == 'admin_options':
 
 	st.button('Summarize Master Results', on_click=show_master_results)
 
-# WIP
 # display the master file summary page under the Admin screen
 if st.session_state['session_status'] == 'admin_master_summary_page':
 	st.button(label='Back to Start Page', on_click=reset_to_start)
 	st.subheader('Summary of Previous quizzes')
-	if len(st.session_state['summary_groups']) > 0:
-		st.selectbox(label='Filter by GroupID', options=st.session_state['summary_groups'],
-					 key='admin_groupID', on_change=filter_admin_summary_df)
+	col5, col6 = st.columns(2)
+	with col5:
+		if len(st.session_state['summary_groups']) > 0:
+			st.selectbox(label='Filter by GroupID', options=st.session_state['summary_groups'],
+						 key='admin_groupID', on_change=filter_admin_summary_df_by_group)
+	with col6:
+		if len(st.session_state['user_names']) > 0:
+			st.selectbox(label='Filter by UserName', options=st.session_state['user_names'],
+						 key='admin_user_name', on_change=filter_admin_summary_df_by_name)
 	display_admin_summary_results()
 	st.dataframe(st.session_state['summary_df'])
+
+	# download_file = convert_df_to_csv(st.session_state['summary_df'])
+	download_file = convert_df_to_excel(st.session_state['summary_df'], st.session_state['answers_df'])
+	st.download_button('Download Summary File', download_file, file_name='QuizSummary.xlsx')
 
 # display the quiz selection form
 if st.session_state['session_status'] == 'init_form_submitted':
