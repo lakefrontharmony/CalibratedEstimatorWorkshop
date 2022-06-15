@@ -146,8 +146,8 @@ def add_to_master_record():
 	summary_df = create_summary_df()
 	results_df = create_results_df()
 	if master_file.exists():
-		summary_df = pd.read_excel(master_excel_name, sheet_name='Summary')
-		results_df = pd.read_excel(master_excel_name, sheet_name='Answers')
+		summary_df = pd.read_excel(master_excel_name, sheet_name='Summary', dtype={'GroupID': str})
+		results_df = pd.read_excel(master_excel_name, sheet_name='Answers', dtype={'GroupID': str})
 
 	st.session_state['master_updated'] = False
 
