@@ -433,8 +433,8 @@ if st.session_state['session_status'] == 'admin_master_summary_page':
 			st.selectbox(label='Filter by UserName', options=st.session_state['user_names'],
 						 key='admin_user_name', on_change=filter_admin_summary_df_by_name)
 	display_admin_summary_results()
-	summary_disp_df = create_display_friendly_df(st.session_state['summary_df'])
-	st.dataframe(summary_disp_df)
+	# summary_disp_df = create_display_friendly_df(st.session_state['summary_df'])
+	st.dataframe(st.session_state['summary_df'])
 
 	# download_file = convert_df_to_csv(st.session_state['summary_df'])
 	download_file = convert_df_to_excel(st.session_state['summary_df'], st.session_state['answers_df'])
