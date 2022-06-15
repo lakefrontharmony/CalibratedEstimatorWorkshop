@@ -353,6 +353,23 @@ def create_results_df() -> pd.DataFrame:
 								 'CorrectAnswer', 'Solution', 'LowerBound', 'UpperBound'])
 
 
+# assumes the input is the summary_df for now
+def create_display_friendly_df(in_df: pd.DataFrame) -> pd.DataFrame:
+	return_df = in_df.copy()
+	return_df['UserName'] = return_df['UserName'].astype(str)
+	return_df['GroupID'] = return_df['GroupID'].astype(str)
+	return_df['QuizName'] = return_df['QuizName'].astype(str)
+	return_df['DateTime'] = return_df['DateTime'].astype(str)
+	return_df['Num90CIQuestions'] = return_df['Num90CIQuestions'].astype(str)
+	return_df['Num90CICorrect'] = return_df['Num90CICorrect'].astype(str)
+	return_df['NumBinaryQuestions'] = return_df['NumBinaryQuestions'].astype(str)
+	return_df['NumBinaryCorrect'] = return_df['NumBinaryCorrect'].astype(str)
+	return_df['ExpectedBinaryCorrect'] = return_df['ExpectedBinaryCorrect'].astype(str)
+	return_df['Binary100PctConfidence'] = return_df['Binary100PctConfidence'].astype(str)
+	return_df['Binary100PctConfidenceCorrect'] = return_df['Binary100PctConfidenceCorrect'].astype(str)
+	return return_df
+
+
 @st.cache
 def convert_df_to_csv(in_df: pd.DataFrame):
 	return in_df.to_csv().encode('utf-8')
@@ -416,7 +433,8 @@ if st.session_state['session_status'] == 'admin_master_summary_page':
 			st.selectbox(label='Filter by UserName', options=st.session_state['user_names'],
 						 key='admin_user_name', on_change=filter_admin_summary_df_by_name)
 	display_admin_summary_results()
-	st.dataframe(st.session_state['summary_df'].to_string())
+	summary_disp_df = create_display_friendly_df(st.session_state['summary_df'])
+	st.dataframe(summary_disp_df)
 
 	# download_file = convert_df_to_csv(st.session_state['summary_df'])
 	download_file = convert_df_to_excel(st.session_state['summary_df'], st.session_state['answers_df'])
