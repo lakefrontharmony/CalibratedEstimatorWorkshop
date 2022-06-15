@@ -45,8 +45,8 @@ def display_admin_screen():
 def show_master_results():
 	master_file_name = 'Files/MasterResults.xlsx'
 	if Path(master_file_name).exists():
-		st.session_state['summary_df'] = pd.read_excel(master_file_name, sheet_name='Summary')
-		st.session_state['answers_df'] = pd.read_excel(master_file_name, sheet_name='Answers')
+		st.session_state['summary_df'] = pd.read_excel(master_file_name, sheet_name='Summary', dtype={'GroupID': str})
+		st.session_state['answers_df'] = pd.read_excel(master_file_name, sheet_name='Answers', dtype={'GroupID': str})
 	else:
 		st.session_state['summary_df'] = create_summary_df()
 		st.session_state['answers_df'] = create_results_df()
